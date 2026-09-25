@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dharohar - GI Tag Heritage Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background: #f4f4f4; }
+        #sidebar { width: 420px; padding: 20px; overflow-y: auto; box-sizing: border-box; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; }
+        #map { flex-grow: 1; height: 100vh; }
+        
+        /* Headers */
+        #sidebar h1 { font-family: 'Georgia', serif; color: #2c3e50; margin: 0; padding-bottom: 5px; }
+        .subtitle { margin: 0 0 20px 0; color: #666; font-size: 14px; font-style: italic; }
+        
+        /* Buttons */
+        button { padding: 10px; width: 100%; margin-bottom: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-blue:hover { background: #0056b3; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-green:hover { background: #218838; }
+        .btn-orange { background: #ffc107; color: #333; }
+        .btn-orange:hover { background: #e0a800; }
+        
+        /* Inputs */
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        input:focus, textarea:focus { outline: none; border-color: #007bff; }
+
+        /* Search */
+        .search-box { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+
+        /* Form Panel */
+        #admin-panel { background: #f9f9f9; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        #admin-panel h3 { margin-top: 0; color: #333; }
+
+        /* Toast Notification */
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 15px 25px; border-radius: 5px; font-weight: bold; z-index: 10000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .toast-success { background: #28a745; }
+        .toast-error { background: #dc3545; }
+
+        /* Tag Cards */
+        .tag-card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 4px solid #007bff; }
+        .tag-card h2 { margin-top: 0; color: #333; font-size: 18px; }
+        .distance { color: #007bff; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+        .tag-card p { margin: 5px 0; color: #444; font-size: 14px; }
+        
+        /* Instruction */
+        .instruction { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toast"></div>
+
+    <div id="sidebar">
+        <h1>Dharohar</h1>
+        <p class="subtitle">Geographical Indications of India</p>
+        
+        <div class="search-box">
+            <input type="text" id="search-query" placeholder="Search any city (e.g. Delhi, Jaipur...)" onkeypress="handleEnter(event)">
+            <button class="btn-blue" onclick="searchLocation()">🔍 Search Location</button>
+            <button class="btn-orange" onclick="viewAllIndia()">🗺️ View All India</button>
+        </div>
+
+        <div id="admin-panel">
+            <h3>➕ Add New GI Tag</h3>
+            <div class="instruction">
+                <b>Step 1:</b> Click the Green Button below.<br>
+                <b>Step 2:</b> Click exactly where it is on the map.<br>
+                <b>Step 3:</b> Type the Name & Story, then press Submit.
+            </div>
+            
+            <form id="add-tag-form">
+                <!-- The button is inside the form now -->
+                <button type="button" class="btn-green" id="pick-loc-btn">📍 Click to Pick Location</button>
+                
+                <input type="number" step="any" name="lat" id="lat-input" placeholder="Latitude (Auto-filled)" required>
+                <input type="number" step="any" name="lon" id="lon-input" placeholder="Longitude (Auto-filled)" required>
+                
+                <input type="text" name="name" placeholder="Name (e.g. Banarasi Saree)" required>
+                <textarea name="story" placeholder="Story (e.g. Handwoven in Varanasi)" rows="2"></textarea>
+                <input type="text" name="authentication" placeholder="Authentication (e.g. Silk Mark)">
+                <input type="text" name="contact" placeholder="Contact (e.g. +91...)">
+                
+                <button type="submit" class="btn-green">✅ Submit Tag</button>
+            </form>
+        </div>
+
+        <div id="tag-list">Loading GI Tags...</div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        var map = L.map('map').setView([23.5, 78.0], 5); // View of India
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let markersLayer = L.layerGroup().addTo(map);
+        let currentLat = 23.5;
+        let currentLon = 78.0;
+        let pickingLocation = false;
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = type === 'success' ? 'toast-success' : 'toast-error';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function fetchTags(lat, lon) {
+            currentLat = lat;
+            currentLon = lon;
+            markersLayer.clearLayers();
+            document.getElementById('tag-list').innerHTML = 'Updating...';
+
+            fetch(`/api/gi_tags?lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('tag-list');
+                    list.innerHTML = ''; 
+
+                    if (data.length === 0) {
+                        list.innerHTML = '<p>No tags found in this area.</p>';
+                    } else {
+                        data.forEach(tag => {
+                            const div = document.createElement('div');
+                            div.className = 'tag-card';
+                            div.innerHTML = `
+                                <h2>${tag.name}</h2>
+                                <div class="distance">${tag.distance} km away</div>
+                                <p><strong>Story:</strong> ${tag.story}</p>
+                                <p><strong>Auth:</strong> ${tag.authentication}</p>
+                                <p><strong>Contact:</strong> ${tag.contact}</p>
+                            `;
+                            list.appendChild(div);
+
+                            const marker = L.marker([tag.lat, tag.lon]).addTo(markersLayer);
+                            marker.bindPopup(`<b>${tag.name}</b><br>${tag.story}`);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function viewAllIndia() {
+            map.setView([23.5, 78.0], 5);
+            fetchTags(23.5, 78.0);
+        }
+
+        async function searchLocation() {
+            const query = document.getElementById('search-query').value;
+            if (!query) return;
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+            const data = await response.json();
+            if (data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                map.setView([lat, lon], 12);
+                fetchTags(lat, lon);
+            } else {
+                showToast("Location not found. Try another city.", 'error');
+            }
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                searchLocation();
+            }
+        }
+
+        document.getElementById('pick-loc-btn').addEventListener('click', function() {
+            pickingLocation = true;
+            this.style.backgroundColor = "#dc3545";
+            this.innerText = "Click on the MAP now!";
+            showToast("Click on the map to select the location!", 'error');
+        });
+
+        map.on('click', function(e) {
+            if (pickingLocation) {
+                document.getElementById('lat-input').value = e.latlng.lat.toFixed(5);
+                document.getElementById('lon-input').value = e.latlng.lng.toFixed(5);
+                
+                pickingLocation = false;
+                const btn = document.getElementById('pick-loc-btn');
+                btn.style.backgroundColor = "#28a745";
+                btn.innerText = "📍 Click to Pick Location";
+                
+                L.marker(e.latlng).addTo(map).bindPopup("New Tag Location").openPopup();
+                showToast("Location captured! Fill the details below.");
+            }
+        });
+
+        document.getElementById('add-tag-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('/add', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'success') {
+                    this.reset();
+                    document.getElementById('lat-input').value = '';
+                    document.getElementById('lon-input').value = '';
+                    showToast("✅ Tag Added Successfully! Updating Map...");
+                    fetchTags(currentLat, currentLon);
+                } else {
+                    showToast("❌ Error: " + (data.error || 'Could not add tag.'), 'error');
+                }
+            })
+            .catch(error => showToast("❌ Network Error. Did you restart the server?", 'error'));
+        });
+
+        // On Load
+        viewAllIndia();
+
+        // REAL-TIME UPDATE: Refresh the map every 5 seconds!
+        setInterval(() => {
+            fetchTags(currentLat, currentLon);
+        }, 5000);
+    </script>
+</body>
+</html>
