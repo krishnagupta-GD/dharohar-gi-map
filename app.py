@@ -6,10 +6,21 @@ import threading
 
 app = Flask(__name__)
 
-# Robust path for the CSV
+# Robust paths for files
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'gi_tags.csv')
+GOVT_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), 'govt_registry.txt')
+
 # Lock to prevent simultaneous writing issues during the demo
 file_lock = threading.Lock()
+
+def is_govt_verified(product_name):
+    """Simulates checking the Government GI Registry."""
+    try:
+        with open(GOVT_REGISTRY_PATH, 'r', encoding='utf-8') as f:
+            official_names = [line.strip().lower() for line in f.readlines()]
+        return product_name.strip().lower() in official_names
+    except FileNotFoundError:
+        return False
 
 def load_gi_data():
     tags = []
@@ -25,15 +36,14 @@ def load_gi_data():
                         'lon': float(row['lon']),
                         'story': row['story'],
                         'authentication': row['authentication'],
-                        'contact': row['contact']
+                        'contact': row['contact'],
+                        'verified': row.get('verified', 'false') == 'true'
                     })
     except FileNotFoundError:
-        # Automatically create a fresh CSV if it's accidentally deleted
         with open(CSV_PATH, 'w', newline='', encoding='utf-8') as f:
-            f.write("id,name,lat,lon,story,authentication,contact\n")
+            f.write("id,name,lat,lon,story,authentication,contact,verified\n")
         print(f"Created new file: {CSV_PATH}")
     except Exception as e:
-        # Silently handle any parsing issues so the app doesn't crash
         print(f"Silently handled error: {e}")
     return tags
 
@@ -61,6 +71,9 @@ def add_tag():
     if not name or not lat or not lon:
         return jsonify({'error': 'Missing required fields'}), 400
 
+    # Check against the "Govt Registry"
+    verified_status = is_govt_verified(name)
+
     try:
         with file_lock:
             with open(CSV_PATH, 'r', encoding='utf-8') as rf:
@@ -68,14 +81,13 @@ def add_tag():
                 next_id = sum(1 for row in reader)
             with open(CSV_PATH, 'a', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow([next_id, name, lat, lon, story, authentication, contact])
-        return jsonify({'message': 'success'})
+                writer.writerow([next_id, name, lat, lon, story, authentication, contact, str(verified_status).lower()])
+        return jsonify({'message': 'success', 'verified': verified_status})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/gi_tags')
 def get_nearby_tags():
-    # Reload fresh data to get real-time updates
     GI_TAGS = load_gi_data()
     user_lat = request.args.get('lat', type=float)
     user_lon = request.args.get('lon', type=float)
