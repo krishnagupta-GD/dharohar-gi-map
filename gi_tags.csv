@@ -1,7 +1,6 @@
-id,name,lat,lon,story,authentication,contact
-1,Banarasi Saree,25.3176,82.9739,"Handwoven in Varanasi since Mughal era, known for fine silk and zari work.","Check the weaving density – genuine Banarasi has 400+ threads per inch.","+91-12345-67890 (Weavers' Cooperative)"
-2,Bagh Print,24.5180,78.8558,"Traditional hand-block printing from Bagh, Madhya Pradesh, using natural dyes.","Look for small irregularities in the print – machine prints are too perfect.","+91-98765-43210 (Bagh Print Cluster)"
-3,Kanchipuram Silk,12.9964,79.6995,"Temple-inspired motifs, heavy silk saree from Tamil Nadu.","Real Kanchipuram has a distinct 'thud' sound when stretched – ask for the sound test.","+91-55555-55555 (Silk Weavers Society)"
-4,Pochampally Ikat,17.3945,78.4453,"Double-ikat weave from Telangana, known for geometric patterns.","Check the back side – genuine ikat has the same pattern on both sides.","+91-44444-44444 (Ikat Handloom Trust)"
-5,Darjeeling Tea,27.0360,88.2627,"World-famous muscatel flavour, grown in Himalayan foothills.","Genuine Darjeeling has a 'Darjeeling' logo and a unique floral aroma.","+91-33333-33333 (Tea Board of India)"6,Delhi,28.59545,77.21191,,,
-
+id,name,lat,lon,story,authentication,contact,verified
+1,Banarasi Saree,25.3176,82.9739,"Handwoven in Varanasi since Mughal era, known for fine silk and zari work.","Check the weaving density – genuine Banarasi has 400+ threads per inch.","+91-12345-67890 (Weavers' Cooperative)",true
+2,Bagh Print,24.5180,78.8558,"Traditional hand-block printing from Bagh, Madhya Pradesh, using natural dyes.","Look for small irregularities in the print – machine prints are too perfect.","+91-98765-43210 (Bagh Print Cluster)",true
+3,Kanchipuram Silk,12.9964,79.6995,"Temple-inspired motifs, heavy silk saree from Tamil Nadu.","Real Kanchipuram has a distinct 'thud' sound when stretched – ask for the sound test.","+91-55555-55555 (Silk Weavers Society)",true
+4,Pochampally Ikat,17.3945,78.4453,"Double-ikat weave from Telangana, known for geometric patterns.","Check the back side – genuine ikat has the same pattern on both sides.","+91-44444-44444 (Ikat Handloom Trust)",true
+5,Darjeeling Tea,27.0360,88.2627,"World-famous muscatel flavour, grown in Himalayan foothills.","Genuine Darjeeling has a 'Darjeeling' logo and a unique floral aroma.","+91-33333-33333 (Tea Board of India)",true
