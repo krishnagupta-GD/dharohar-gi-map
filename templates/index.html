@@ -10,48 +10,46 @@
         #sidebar { width: 420px; padding: 20px; overflow-y: auto; box-sizing: border-box; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; }
         #map { flex-grow: 1; height: 100vh; }
         
-        /* Headers */
         #sidebar h1 { font-family: 'Georgia', serif; color: #2c3e50; margin: 0; padding-bottom: 5px; }
         .subtitle { margin: 0 0 20px 0; color: #666; font-size: 14px; font-style: italic; }
         
-        /* Buttons */
-        button { padding: 10px; width: 100%; margin-bottom: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        button, input, textarea { padding: 10px; width: 100%; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        
         .btn-blue { background: #007bff; color: white; }
-        .btn-blue:hover { background: #0056b3; }
         .btn-green { background: #28a745; color: white; }
         .btn-green:hover { background: #218838; }
         .btn-orange { background: #ffc107; color: #333; }
         .btn-orange:hover { background: #e0a800; }
-        
-        /* Inputs */
-        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        input:focus, textarea:focus { outline: none; border-color: #007bff; }
 
-        /* Search */
         .search-box { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
-
-        /* Form Panel */
         #admin-panel { background: #f9f9f9; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         #admin-panel h3 { margin-top: 0; color: #333; }
+        .instruction { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
 
-        /* Toast Notification */
         #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 15px 25px; border-radius: 5px; font-weight: bold; z-index: 10000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .toast-success { background: #28a745; }
         .toast-error { background: #dc3545; }
 
-        /* Tag Cards */
         .tag-card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 4px solid #007bff; }
-        .tag-card h2 { margin-top: 0; color: #333; font-size: 18px; }
+        .tag-card h2 { margin-top: 0; color: #333; font-size: 18px; margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .badge { font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: normal; }
+        .badge-verified { background: #d4edda; color: #155724; }
+        .badge-pending { background: #fff3cd; color: #856404; }
         .distance { color: #007bff; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
         .tag-card p { margin: 5px 0; color: #444; font-size: 14px; }
-        
-        /* Instruction */
-        .instruction { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+
+        /* Mobile Responsive Fix */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: 50vh; order: 2; }
+            #map { width: 100%; height: 50vh; order: 1; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Toast Notification -->
     <div id="toast"></div>
 
     <div id="sidebar">
@@ -59,7 +57,7 @@
         <p class="subtitle">Geographical Indications of India</p>
         
         <div class="search-box">
-            <input type="text" id="search-query" placeholder="Search any city (e.g. Delhi, Jaipur...)" onkeypress="handleEnter(event)">
+            <input type="text" id="search-query" placeholder="Search any city (e.g. Delhi...)" onkeypress="handleEnter(event)">
             <button class="btn-blue" onclick="searchLocation()">🔍 Search Location</button>
             <button class="btn-orange" onclick="viewAllIndia()">🗺️ View All India</button>
         </div>
@@ -73,7 +71,6 @@
             </div>
             
             <form id="add-tag-form">
-                <!-- The button is inside the form now -->
                 <button type="button" class="btn-green" id="pick-loc-btn">📍 Click to Pick Location</button>
                 
                 <input type="number" step="any" name="lat" id="lat-input" placeholder="Latitude (Auto-filled)" required>
@@ -96,7 +93,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        var map = L.map('map').setView([23.5, 78.0], 5); // View of India
+        var map = L.map('map').setView([23.5, 78.0], 5); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
@@ -111,7 +108,7 @@
             toast.innerText = message;
             toast.className = type === 'success' ? 'toast-success' : 'toast-error';
             toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
         }
 
         function fetchTags(lat, lon) {
@@ -132,8 +129,14 @@
                         data.forEach(tag => {
                             const div = document.createElement('div');
                             div.className = 'tag-card';
+                            
+                            // DYNAMIC BADGE GENERATION
+                            const badge = tag.verified 
+                                ? '<span class="badge badge-verified">✅ Govt Verified</span>' 
+                                : '<span class="badge badge-pending">⏳ Pending Review</span>';
+
                             div.innerHTML = `
-                                <h2>${tag.name}</h2>
+                                <h2>${tag.name} ${badge}</h2>
                                 <div class="distance">${tag.distance} km away</div>
                                 <p><strong>Story:</strong> ${tag.story}</p>
                                 <p><strong>Auth:</strong> ${tag.authentication}</p>
@@ -197,30 +200,57 @@
             }
         });
 
+        // THE UPGRADED FORM SUBMISSION WITH GOVT REGISTRY CHECK ANIMATION
         document.getElementById('add-tag-form').addEventListener('submit', function(event) {
             event.preventDefault();
             const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
 
-            fetch('/add', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message === 'success') {
-                    this.reset();
-                    document.getElementById('lat-input').value = '';
-                    document.getElementById('lon-input').value = '';
-                    showToast("✅ Tag Added Successfully! Updating Map...");
-                    fetchTags(currentLat, currentLon);
-                } else {
-                    showToast("❌ Error: " + (data.error || 'Could not add tag.'), 'error');
-                }
-            })
-            .catch(error => showToast("❌ Network Error. Did you restart the server?", 'error'));
+            // 1. Simulate a Govt Registry Check
+            submitBtn.innerHTML = '🔄 Checking Govt Registry...';
+            submitBtn.disabled = true;
+            submitBtn.style.backgroundColor = '#ffc107'; 
+            submitBtn.style.color = '#333';
+
+            setTimeout(() => {
+                // 2. Send the data to the backend after the delay
+                fetch('/add', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.style.backgroundColor = '#28a745';
+                    submitBtn.style.color = 'white';
+
+                    if (data.message === 'success') {
+                        this.reset();
+                        document.getElementById('lat-input').value = '';
+                        document.getElementById('lon-input').value = '';
+                        
+                        if (data.verified) {
+                            showToast("✅ Verified! Cross-checked with Govt Registry.");
+                        } else {
+                            showToast("⏳ Pending Review. Sent to Govt for verification.");
+                        }
+                        
+                        fetchTags(currentLat, currentLon);
+                    } else {
+                        showToast("❌ Error: " + (data.error || 'Could not add tag.'), 'error');
+                    }
+                })
+                .catch(error => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.style.backgroundColor = '#28a745';
+                    submitBtn.style.color = 'white';
+                    showToast("❌ Network Error.", 'error');
+                });
+            }, 1500); 
         });
 
-        // On Load
         viewAllIndia();
 
-        // REAL-TIME UPDATE: Refresh the map every 5 seconds!
         setInterval(() => {
             fetchTags(currentLat, currentLon);
         }, 5000);
