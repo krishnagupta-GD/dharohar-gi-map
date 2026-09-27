@@ -82,7 +82,31 @@ def add_tag():
             with open(CSV_PATH, 'a', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow([next_id, name, lat, lon, story, authentication, contact, str(verified_status).lower()])
-        return jsonify({'message': 'success', 'verified': verified_status})
+        
+        # Return the new_id so the frontend can save it to LocalStorage
+        return jsonify({'message': 'success', 'verified': verified_status, 'new_id': next_id})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/delete/<int:tag_id>', methods=['DELETE'])
+def delete_tag(tag_id):
+    """Deletes a tag. In this prototype, the frontend restricts this to the user's own tags."""
+    try:
+        with file_lock:
+            with open(CSV_PATH, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+                fieldnames = reader.fieldnames
+
+            # Filter out the row with the matching ID
+            new_rows = [row for row in rows if int(row['id']) != tag_id]
+
+            with open(CSV_PATH, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(new_rows)
+                
+        return jsonify({'message': 'success'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
