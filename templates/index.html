@@ -126,7 +126,6 @@
                     if (data.length === 0) {
                         list.innerHTML = '<p>No tags found in this area.</p>';
                     } else {
-                        // Get the list of tags this user has added
                         let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
 
                         data.forEach(tag => {
@@ -137,7 +136,6 @@
                                 ? '<span class="badge badge-verified">✅ Govt Verified</span>' 
                                 : '<span class="badge badge-pending">⏳ Pending Review</span>';
 
-                            // Only show delete button if it's in the user's local storage
                             const deleteBtn = myTags.includes(tag.id) 
                                 ? `<button class="btn-delete" onclick="deleteTag(${tag.id})">🗑️ Delete My Submission</button>` 
                                 : '';
@@ -166,7 +164,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.message === 'success') {
-                        // Remove from local storage
                         let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
                         myTags = myTags.filter(tagId => tagId !== id);
                         localStorage.setItem('myTags', JSON.stringify(myTags));
@@ -274,7 +271,6 @@
                         document.getElementById('lat-input').value = '';
                         document.getElementById('lon-input').value = '';
 
-                        // Save the ID to this user's LocalStorage
                         let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
                         myTags.push(data.new_id); 
                         localStorage.setItem('myTags', JSON.stringify(myTags));
@@ -300,7 +296,36 @@
             }, 1500); 
         });
 
-        viewAllIndia();
+        // --- NEW: Automatically Ask for Location on Load ---
+        function initMap() {
+            if (navigator.geolocation) {
+                // Ask for location immediately
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        map.setView([lat, lon], 10); // Zoom in to their level
+                        fetchTags(lat, lon);
+                        showToast("📍 Distances updated based on your location!");
+                    },
+                    (error) => {
+                        // If blocked or denied, fall back to India view
+                        console.log("Auto GPS blocked. Falling back to India view.");
+                        viewAllIndia();
+                        // Only show the error toast if it wasn't just a prompt denial
+                        if(error.code === error.PERMISSION_DENIED) {
+                             showToast("Please click 'Use My Location' to enable GPS.", "error");
+                        }
+                    },
+                    { timeout: 5000 } // Give up after 5 seconds to keep the app snappy
+                );
+            } else {
+                viewAllIndia();
+            }
+        }
+
+        // Run the initialization
+        initMap();
 
         setInterval(() => {
             fetchTags(currentLat, currentLon);
