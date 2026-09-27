@@ -22,6 +22,9 @@
         .btn-green:hover { background: #218838; }
         .btn-orange { background: #ffc107; color: #333; }
         .btn-orange:hover { background: #e0a800; }
+        
+        .btn-delete { background: #dc3545; color: white; font-size: 12px; padding: 6px; margin-top: 10px; width: auto; display: inline-block; }
+        .btn-delete:hover { background: #c82333; }
 
         .search-box { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
         #admin-panel { background: #f9f9f9; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
@@ -40,7 +43,6 @@
         .distance { color: #007bff; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
         .tag-card p { margin: 5px 0; color: #444; font-size: 14px; }
 
-        /* Mobile Responsive Fix */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #sidebar { width: 100%; height: 50vh; order: 2; }
@@ -57,9 +59,7 @@
         <p class="subtitle">Geographical Indications of India</p>
         
         <div class="search-box">
-            <!-- ADDED THE USE MY LOCATION BUTTON HERE -->
             <button class="btn-green" onclick="getLocation()">📍 Use My Location</button>
-            
             <input type="text" id="search-query" placeholder="Search any city (e.g. Delhi...)" onkeypress="handleEnter(event)">
             <button class="btn-blue" onclick="searchLocation()">🔍 Search Location</button>
             <button class="btn-orange" onclick="viewAllIndia()">🗺️ View All India</button>
@@ -75,15 +75,12 @@
             
             <form id="add-tag-form">
                 <button type="button" class="btn-green" id="pick-loc-btn">📍 Click to Pick Location</button>
-                
                 <input type="number" step="any" name="lat" id="lat-input" placeholder="Latitude (Auto-filled)" required>
                 <input type="number" step="any" name="lon" id="lon-input" placeholder="Longitude (Auto-filled)" required>
-                
                 <input type="text" name="name" placeholder="Name (e.g. Banarasi Saree)" required>
                 <textarea name="story" placeholder="Story (e.g. Handwoven in Varanasi)" rows="2"></textarea>
                 <input type="text" name="authentication" placeholder="Authentication (e.g. Silk Mark)">
                 <input type="text" name="contact" placeholder="Contact (e.g. +91...)">
-                
                 <button type="submit" class="btn-green">✅ Submit Tag</button>
             </form>
         </div>
@@ -129,6 +126,9 @@
                     if (data.length === 0) {
                         list.innerHTML = '<p>No tags found in this area.</p>';
                     } else {
+                        // Get the list of tags this user has added
+                        let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
+
                         data.forEach(tag => {
                             const div = document.createElement('div');
                             div.className = 'tag-card';
@@ -137,12 +137,18 @@
                                 ? '<span class="badge badge-verified">✅ Govt Verified</span>' 
                                 : '<span class="badge badge-pending">⏳ Pending Review</span>';
 
+                            // Only show delete button if it's in the user's local storage
+                            const deleteBtn = myTags.includes(tag.id) 
+                                ? `<button class="btn-delete" onclick="deleteTag(${tag.id})">🗑️ Delete My Submission</button>` 
+                                : '';
+
                             div.innerHTML = `
                                 <h2>${tag.name} ${badge}</h2>
                                 <div class="distance">${tag.distance} km away</div>
                                 <p><strong>Story:</strong> ${tag.story}</p>
                                 <p><strong>Auth:</strong> ${tag.authentication}</p>
                                 <p><strong>Contact:</strong> ${tag.contact}</p>
+                                ${deleteBtn}
                             `;
                             list.appendChild(div);
 
@@ -154,12 +160,32 @@
                 .catch(error => console.error('Error:', error));
         }
 
+        function deleteTag(id) {
+            if (confirm("Are you sure you want to delete this tag?")) {
+                fetch(`/delete/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'success') {
+                        // Remove from local storage
+                        let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
+                        myTags = myTags.filter(tagId => tagId !== id);
+                        localStorage.setItem('myTags', JSON.stringify(myTags));
+
+                        showToast("🗑️ Tag deleted successfully.");
+                        fetchTags(currentLat, currentLon); 
+                    } else {
+                        showToast("❌ Error deleting tag.", 'error');
+                    }
+                })
+                .catch(error => showToast("❌ Network error.", 'error'));
+            }
+        }
+
         function viewAllIndia() {
             map.setView([23.5, 78.0], 5);
             fetchTags(23.5, 78.0);
         }
 
-        // --- THE USE MY LOCATION FUNCTION ---
         function getLocation() {
             if (navigator.geolocation) {
                 showToast("Requesting your location...", "success");
@@ -247,6 +273,11 @@
                         this.reset();
                         document.getElementById('lat-input').value = '';
                         document.getElementById('lon-input').value = '';
+
+                        // Save the ID to this user's LocalStorage
+                        let myTags = JSON.parse(localStorage.getItem('myTags') || '[]');
+                        myTags.push(data.new_id); 
+                        localStorage.setItem('myTags', JSON.stringify(myTags));
                         
                         if (data.verified) {
                             showToast("✅ Verified! Cross-checked with Govt Registry.");
