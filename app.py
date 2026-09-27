@@ -6,20 +6,31 @@ import threading
 
 app = Flask(__name__)
 
-# Robust paths for files
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'gi_tags.csv')
-GOVT_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), 'govt_registry.txt')
-
-# Lock to prevent simultaneous writing issues during the demo
 file_lock = threading.Lock()
 
+# --- BULLETPROOF VERIFICATION ---
+# Hardcoded list to bypass any file encoding issues entirely.
+OFFICIAL_GI_TAGS = {
+    "banarasi saree", "bagh print", "kanchipuram silk", "pochampally ikat",
+    "darjeeling tea", "mysore silk", "kolhapuri chappal", "nagpur orange",
+    "alphonso mango", "basmati rice", "madhubani painting", "pattachitra",
+    "kalamkari", "channapatna toys", "mysore sandalwood", "bidriware",
+    "warli painting", "phulkari", "bandhani", "kutch embroidery",
+    "pashmina", "kashmiri saffron", "kangra tea", "muga silk",
+    "assam tea", "sikkim large cardamom", "naga mircha", "manipur black rice",
+    "odisha rasagola", "banglar rasogolla", "joynagar moa", "sitalpati",
+    "aranmula mirror", "alleppey coir", "thanjavur painting", "madurai sungudi",
+    "nilgiri tea", "coorg green cardamom", "mysore agarbathi", "hyderabad haleem",
+    "hyderabadi pearls", "tirupati laddu", "guntur sannam chilli", "araku coffee",
+    "uppada jamdani saree", "gadwal saree", "cheriyal paintings", "nirmal toys"
+}
+
 def is_govt_verified(product_name):
-    """Simulates checking the Government GI Registry."""
+    """Checks against the hardcoded verified list."""
     try:
-        with open(GOVT_REGISTRY_PATH, 'r', encoding='utf-8') as f:
-            official_names = [line.strip().lower() for line in f.readlines()]
-        return product_name.strip().lower() in official_names
-    except FileNotFoundError:
+        return product_name.strip().lower() in OFFICIAL_GI_TAGS
+    except Exception:
         return False
 
 def load_gi_data():
@@ -42,7 +53,6 @@ def load_gi_data():
     except FileNotFoundError:
         with open(CSV_PATH, 'w', newline='', encoding='utf-8') as f:
             f.write("id,name,lat,lon,story,authentication,contact,verified\n")
-        print(f"Created new file: {CSV_PATH}")
     except Exception as e:
         print(f"Silently handled error: {e}")
     return tags
@@ -71,7 +81,6 @@ def add_tag():
     if not name or not lat or not lon:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Check against the "Govt Registry"
     verified_status = is_govt_verified(name)
 
     try:
@@ -83,29 +92,23 @@ def add_tag():
                 writer = csv.writer(f)
                 writer.writerow([next_id, name, lat, lon, story, authentication, contact, str(verified_status).lower()])
         
-        # Return the new_id so the frontend can save it to LocalStorage
         return jsonify({'message': 'success', 'verified': verified_status, 'new_id': next_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/delete/<int:tag_id>', methods=['DELETE'])
 def delete_tag(tag_id):
-    """Deletes a tag. In this prototype, the frontend restricts this to the user's own tags."""
     try:
         with file_lock:
             with open(CSV_PATH, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
                 fieldnames = reader.fieldnames
-
-            # Filter out the row with the matching ID
             new_rows = [row for row in rows if int(row['id']) != tag_id]
-
             with open(CSV_PATH, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(new_rows)
-                
         return jsonify({'message': 'success'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
