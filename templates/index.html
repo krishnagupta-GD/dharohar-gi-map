@@ -296,37 +296,10 @@
             }, 1500); 
         });
 
-        // --- NEW: Automatically Ask for Location on Load ---
-        function initMap() {
-            if (navigator.geolocation) {
-                // Ask for location immediately
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        map.setView([lat, lon], 10); // Zoom in to their level
-                        fetchTags(lat, lon);
-                        showToast("📍 Distances updated based on your location!");
-                    },
-                    (error) => {
-                        // If blocked or denied, fall back to India view
-                        console.log("Auto GPS blocked. Falling back to India view.");
-                        viewAllIndia();
-                        // Only show the error toast if it wasn't just a prompt denial
-                        if(error.code === error.PERMISSION_DENIED) {
-                             showToast("Please click 'Use My Location' to enable GPS.", "error");
-                        }
-                    },
-                    { timeout: 5000 } // Give up after 5 seconds to keep the app snappy
-                );
-            } else {
-                viewAllIndia();
-            }
-        }
+        // Start with the full India view
+        viewAllIndia();
 
-        // Run the initialization
-        initMap();
-
+        // Keep the map alive with 5-second polling
         setInterval(() => {
             fetchTags(currentLat, currentLon);
         }, 5000);
