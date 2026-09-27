@@ -57,6 +57,9 @@
         <p class="subtitle">Geographical Indications of India</p>
         
         <div class="search-box">
+            <!-- ADDED THE USE MY LOCATION BUTTON HERE -->
+            <button class="btn-green" onclick="getLocation()">📍 Use My Location</button>
+            
             <input type="text" id="search-query" placeholder="Search any city (e.g. Delhi...)" onkeypress="handleEnter(event)">
             <button class="btn-blue" onclick="searchLocation()">🔍 Search Location</button>
             <button class="btn-orange" onclick="viewAllIndia()">🗺️ View All India</button>
@@ -130,7 +133,6 @@
                             const div = document.createElement('div');
                             div.className = 'tag-card';
                             
-                            // DYNAMIC BADGE GENERATION
                             const badge = tag.verified 
                                 ? '<span class="badge badge-verified">✅ Govt Verified</span>' 
                                 : '<span class="badge badge-pending">⏳ Pending Review</span>';
@@ -155,6 +157,27 @@
         function viewAllIndia() {
             map.setView([23.5, 78.0], 5);
             fetchTags(23.5, 78.0);
+        }
+
+        // --- THE USE MY LOCATION FUNCTION ---
+        function getLocation() {
+            if (navigator.geolocation) {
+                showToast("Requesting your location...", "success");
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        map.setView([lat, lon], 10);
+                        fetchTags(lat, lon);
+                        showToast("Location found! Distances updated.");
+                    },
+                    (error) => {
+                        showToast("GPS blocked or denied. Please use the Search Bar instead.", "error");
+                    }
+                );
+            } else {
+                showToast("Geolocation is not supported by this browser.", "error");
+            }
         }
 
         async function searchLocation() {
@@ -200,21 +223,18 @@
             }
         });
 
-        // THE UPGRADED FORM SUBMISSION WITH GOVT REGISTRY CHECK ANIMATION
         document.getElementById('add-tag-form').addEventListener('submit', function(event) {
             event.preventDefault();
             const formData = new FormData(this);
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
 
-            // 1. Simulate a Govt Registry Check
             submitBtn.innerHTML = '🔄 Checking Govt Registry...';
             submitBtn.disabled = true;
             submitBtn.style.backgroundColor = '#ffc107'; 
             submitBtn.style.color = '#333';
 
             setTimeout(() => {
-                // 2. Send the data to the backend after the delay
                 fetch('/add', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
